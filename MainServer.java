@@ -7,9 +7,10 @@ public class MainServer {
     private static final int PORT = 7777;
 
     public static void main(String[] args) {
+        
         try (ServerSocket serversocket = new ServerSocket(PORT)) {
             while (true) {
-                new Thread(new ListenerClient(serversocket.accept())).start();
+                new Thread(new PlayerConnection(serversocket.accept())).start();
             }
         }
         catch (IOException e) {
