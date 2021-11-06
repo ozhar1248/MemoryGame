@@ -1,26 +1,24 @@
 package MemoryGame;
 
-public class InterperterClient implements IObserver, ISubject{
+/*Receive messages from player, interpret them and call methods of game according to the messages*/
+/*Maybe change the name*/
+public class InterperterClient implements IObserver{
     private ISubject m_player;
     private int m_id;
-    private IObserver m_game;
+    private Game m_game;
 
-    public InterperterClient(ISubject player, int id) {
+    public InterperterClient(ISubject player, int id, Game game) {
         m_player = player;
         player.registerObserver(this);
         m_id = id;
-    }
-    public void update(Object obj) {
-        String message = (String)obj;
+        this.m_game = game;
     }
 
-    public void registerObserver(IObserver o) {
-        m_game = o;
-    }
-    public void removeObserver(IObserver o) {
-        m_game = null;
-    }
-    public void notifyObservers() {
-        m_game.update();
+    public void update(Object obj) {
+        String message = (String)obj;
+        Package pack = new Package(message);
+        if (pack.getOperation()==0) {
+            m_game.cardChosen(Integer.parseInt(pack.getParameter(1)),m_id);
+        }
     }
 }
