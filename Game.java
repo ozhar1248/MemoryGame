@@ -1,29 +1,31 @@
 package MemoryGame;
 
-public class Game {
+//need to separate between methods for general game and methods for specific game
+public class Game implements IObserver{
     public static final int NUM_OF_PLAYERS = 2;
     int currentNumPlayers;
-    Connection[] players;
-    InterperterClient[] interpreters;
+    Player[] players;
+    InterpreterClient interpreter;
     int turn;
+    GameServerLogic game;
 
     public Game() {
-        players = new Connection[NUM_OF_PLAYERS];
-        interpreters = new InterperterClient[NUM_OF_PLAYERS];
+        players = new Player[NUM_OF_PLAYERS];
+        interpreter = new InterpreterClient(this);
         currentNumPlayers = 0;
         turn = 0;
+
     }
 
-    public int addParticipate(Connection player) {
+    public int addParticipate(Player player) {
         if (currentNumPlayers >= NUM_OF_PLAYERS) {
             return -1;
         }
-        players[currentNumPlayers] = player;
-        interpreters[currentNumPlayers] = new InterperterClient(player,currentNumPlayers, this);
-        currentNumPlayers++;
+        players[currentNumPlayers++] = player;
         if (!isFull()) {
             player.send(ProtocolWithClient.waitForOpponent().toString());
         }
+        player.registerObserver(this);
         return 0;
     }
 
@@ -31,16 +33,22 @@ public class Game {
         return currentNumPlayers == NUM_OF_PLAYERS;
     }
 
-    public void start() {
+    public void start(int size) {
         assert players.length == NUM_OF_PLAYERS;
         for (int i=0; i<players.length; ++i) {
             players[i].send(ProtocolWithClient.startGame().toString());
         }
-        players[0].send(ProtocolWithClient.changeTurn().toString());
+
+        game = new GameServerLogic(size, players);
+        interpreter.setGameLogic(game);
     }
 
-    public void cardChosen(int card, int player) {
-        System.out.println("player "+player+" chose "+card);
-    }
+    @Override
+    public void update(Object obj) {
+        String message = (String)obj;
+        if (interpreter != null) {
+            interpreter.interpret(message);
+        }
 
+    }
 }

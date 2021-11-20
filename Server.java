@@ -4,23 +4,24 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.util.ArrayList;
 
-public class Server {
+public class Server implements IObserver{
     private static final int PORT = 7777;
+    private PlayersCollection players;
+    private Game lastGame;
+    private ArrayList<Game> games;
 
     public Server() {
-        ArrayList<Game> games = new ArrayList<>();
-        Game lastGame = new Game();
+        games = new ArrayList<>();
+        lastGame = new Game();
+        players= new PlayersCollection();
+
         try (ServerSocket serversocket = new ServerSocket(PORT)) {
             while (true) {
-                Connection player = new Connection(serversocket.accept());
+                Player player = players.waitForNewPlayer(serversocket);
+                player.registerObserver(this);
                 player.startListening();
                 //
-                lastGame.addParticipate(player);
-                if (lastGame.isFull()) {
-                    lastGame.start();
-                    games.add(lastGame);
-                    lastGame = new Game();
-                }
+
             }
         }
         catch (IOException e) {
@@ -28,4 +29,24 @@ public class Server {
         }
     }
 
+    @Override
+    public void update(Object obj) {
+        String message = (String)obj;
+        Package pack = new Package(message);
+        if (pack.getOperation() != 0) {
+            return;
+        }
+        int id = pack.getSenderID();
+        int size = Integer.parseInt(pack.getParameter(1));
+
+        System.out.println("request for game. id:"+id+" size:"+size);
+        Player player = players.getPlayer(id);
+        player.removeObserver(this);
+        lastGame.addParticipate(player);
+        if (lastGame.isFull()) {
+            lastGame.start(size);
+            games.add(lastGame);
+            lastGame = new Game();
+        }
+    }
 }
