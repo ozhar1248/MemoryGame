@@ -15,6 +15,13 @@ public class InterpreterClient {
         if (pack.getOperation()==1) {
             gameLogic.cardChosen(id, Integer.parseInt(pack.getParameter(1))); //add this method to gameLogic
         }
+        if (pack.getOperation()==2) {
+            if (!m_game.isFull()) {
+                m_game.removePlayer(id);
+                return;
+            }
+            gameLogic.exit(id);
+        }
     }
 
     public void setGameLogic(GameServerLogic logic) {

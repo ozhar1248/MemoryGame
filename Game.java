@@ -21,7 +21,13 @@ public class Game implements IObserver{
         if (currentNumPlayers >= NUM_OF_PLAYERS) {
             return -1;
         }
-        players[currentNumPlayers++] = player;
+        for (int i=0; i<players.length; ++i) {
+            if (players[i]==null) {
+                players[i] = player;
+                currentNumPlayers++;
+                break;
+            }
+        }
         if (!isFull()) {
             player.send(ProtocolWithClient.waitForOpponent().toString());
         }
@@ -33,16 +39,26 @@ public class Game implements IObserver{
         return currentNumPlayers == NUM_OF_PLAYERS;
     }
 
-    public void start(int size) {
+    public void start(int sizeRow) {
         assert players.length == NUM_OF_PLAYERS;
         for (int i=0; i<players.length; ++i) {
             players[i].send(ProtocolWithClient.startGame().toString());
         }
 
-        game = new GameServerLogic(size, players);
+        game = new GameServerLogic(sizeRow, players);
         interpreter.setGameLogic(game);
     }
 
+    public void removePlayer(int id) {
+        for (int i=0; i<players.length; ++i) {
+            if (players[i].getId() == id) {
+                players[i].removeObserver(this);
+                players[i] = null;
+                currentNumPlayers--;
+                return;
+            }
+        }
+    }
     @Override
     public void update(Object obj) {
         String message = (String)obj;

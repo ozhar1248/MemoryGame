@@ -6,12 +6,12 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 
-public class Connection implements Runnable, ISubject{
-    private Socket m_socket;
-    private BufferedReader m_reader;
-    private PrintWriter m_writer;
-    private IObserver m_dispatcherToServer;
-    private String newLine;
+public abstract class Connection implements ISubject{
+    protected Socket m_socket;
+    protected BufferedReader m_reader;
+    protected PrintWriter m_writer;
+    protected IObserver m_dispatcherToServer;
+    protected String newLine;
 
 
     public Connection(Socket socket) {
@@ -29,32 +29,9 @@ public class Connection implements Runnable, ISubject{
         }
     }
 
-    public void startListening() {
-        new Thread(this).start();
-    }
 
-    public void run() {
-        try {
-            System.out.println("start listening to client");
-            while (true) {
-                newLine = m_reader.readLine();
-                System.out.println("rec: "+newLine);
-                notifyObservers();
-            }
-        }
-        catch (IOException e) {
-            System.out.println(e.getMessage());
-        }
-        finally {
-            try {
-                m_socket.close();
-            }
-            catch (IOException e) {
 
-            }
-        }
 
-    }
 
     public void send(String message) {
         m_writer.println(message);
@@ -72,6 +49,8 @@ public class Connection implements Runnable, ISubject{
     public void notifyObservers() {
         m_dispatcherToServer.update(newLine);
     }
+
+    public abstract void startListening() ;
 
 
 }

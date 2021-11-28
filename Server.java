@@ -5,17 +5,22 @@ import java.net.ServerSocket;
 import java.util.ArrayList;
 
 public class Server implements IObserver{
-    private static final int PORT = 7777;
+
     private PlayersCollection players;
-    private Game lastGame;
-    private ArrayList<Game> games;
+    private Game[] newGames;
+    private ArrayList<Game>[] gamesCollections;
 
     public Server() {
-        games = new ArrayList<>();
-        lastGame = new Game();
+        gamesCollections = new ArrayList[MemoryGame.NUM_OF_LEVELS];
+        newGames = new Game[MemoryGame.NUM_OF_LEVELS];
+        for (int i=0; i<MemoryGame.NUM_OF_LEVELS; ++i) {
+            gamesCollections[i] = new ArrayList<>();
+            newGames[i] = new Game();
+        }
+
         players= new PlayersCollection();
 
-        try (ServerSocket serversocket = new ServerSocket(PORT)) {
+        try (ServerSocket serversocket = new ServerSocket(MemoryGame.PORT)) {
             while (true) {
                 Player player = players.waitForNewPlayer(serversocket);
                 player.registerObserver(this);
@@ -37,16 +42,29 @@ public class Server implements IObserver{
             return;
         }
         int id = pack.getSenderID();
-        int size = Integer.parseInt(pack.getParameter(1));
+        int sizeRow = Integer.parseInt(pack.getParameter(1));
+        String name = pack.getParameter(2);
 
-        System.out.println("request for game. id:"+id+" size:"+size);
         Player player = players.getPlayer(id);
+        player.setName(name);
         player.removeObserver(this);
-        lastGame.addParticipate(player);
-        if (lastGame.isFull()) {
-            lastGame.start(size);
-            games.add(lastGame);
-            lastGame = new Game();
+        if (sizeRow == MemoryGame.SIZE_ROW_EASY) {
+            addParticipant(MemoryGame.LEVEL1, sizeRow, player);
+        }
+        else if (sizeRow == MemoryGame.SIZE_ROW_MEDIUM) {
+            addParticipant(MemoryGame.LEVEL2, sizeRow, player);
+        }
+        else if (sizeRow == MemoryGame.SIZE_ROW_HARD) {
+            addParticipant(MemoryGame.LEVEL3, sizeRow, player);
+        }
+    }
+
+    public void addParticipant(int level, int sizeRow, Player player) {
+        newGames[level-1].addParticipate(player);
+        if (newGames[level-1].isFull()) {
+            newGames[level-1].start(sizeRow);
+            gamesCollections[level-1].add(newGames[level-1]);
+            newGames[level-1] = new Game();
         }
     }
 }

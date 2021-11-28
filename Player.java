@@ -5,14 +5,15 @@ import java.util.ArrayList;
 
 public class Player implements IObserver, ISubject{
     private int id;
-    private Connection connectionWithUser;
+    private String name;
+    private ConnectionServer connectionWithUser;
     private ArrayList<IObserver> observers;
     String newMessage;
 
     public Player(Socket socket, int id) {
         observers = new ArrayList<>();
         this.id = id;
-        connectionWithUser = new Connection(socket);
+        connectionWithUser = new ConnectionServer(socket);
         connectionWithUser.registerObserver(this);
     }
 
@@ -20,12 +21,19 @@ public class Player implements IObserver, ISubject{
         return id;
     }
 
+    public String getName() {
+        return name;
+    }
     public void startListening() {
         connectionWithUser.startListening();
     }
 
     public void send(String message) {
         connectionWithUser.send(message);
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 
 

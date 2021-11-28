@@ -14,6 +14,14 @@ public class Package {
     }
 
     public Package(String message) {
+        if (message == null ) {
+            System.out.println("I received null");
+            return;
+        }
+
+        if (message.equals("exit")) {
+
+        }
         message = message.trim();
         String[] tokens = message.split("#");
         this.senderID = Integer.parseInt(tokens[0]);

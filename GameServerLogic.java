@@ -6,15 +6,35 @@ public class GameServerLogic {
     private int[] board;
     private Player[] players;
     private int lastCardIndex;
+    private int points[];
 
-    public GameServerLogic(int size, Player[] players) {
-        board = new int[size];
+    public GameServerLogic(int sizeRow, Player[] players) {
+        board = new int[sizeRow*sizeRow];
         resetBoard();
-        shuffle();
+        //shuffle();
         printBoard();
         this.players = players;
+        points = new int[players.length];
         lastCardIndex = -1;
-        players[0].send(ProtocolWithClient.changeTurn().toString());
+        resetPoints();
+        informNames();
+        players[0].send(ProtocolWithClient.changeTurn());
+
+    }
+
+    private void informNames() {
+        String[] names = new String[players.length];
+        for (int i=0; i<players.length; ++i) {
+            names[i] = players[i].getName();
+        }
+        for (int i=0; i<players.length; ++i) {
+            players[i].send(ProtocolWithClient.informNames(names));
+        }
+    }
+    private void resetPoints() {
+        for (int i=0; i< points.length; ++i) {
+            points[i] = 0;
+        }
     }
 
     private void resetBoard() {
@@ -54,9 +74,8 @@ public class GameServerLogic {
 
     public void cardChosen(int idPlayer, int cardIndex) {
         //lock
-        if (cardIndex == lastCardIndex) { //not necessery
-            return;
-        }
+        int indexPlayer = indexOfPlayer(idPlayer);
+
         if (lastCardIndex == -1) {
             for (int i=0; i<players.length; ++i) {
                 players[i].send(ProtocolWithClient.flipCard(cardIndex,getValue(cardIndex)).toString());
@@ -66,9 +85,12 @@ public class GameServerLogic {
             return;
         }
         if (getValue(cardIndex) == getValue(lastCardIndex)) {
+            points[indexPlayer]++;
             for (int i=0; i<players.length; ++i) {
                 players[i].send(ProtocolWithClient.flipCardsPermanently(cardIndex,lastCardIndex,getValue(cardIndex)).toString());
+                players[i].send(ProtocolWithClient.updatePoints(indexPlayer, points[indexPlayer]));
             }
+
             lastCardIndex = -1;
             return;
         }
@@ -77,7 +99,7 @@ public class GameServerLogic {
             players[i].send(ProtocolWithClient.flipCard(cardIndex,getValue(cardIndex)).toString());
         }
         lastCardIndex = -1;
-        players[nextIndexPlayer(indexOfPlayer(idPlayer))].send(ProtocolWithClient.changeTurn().toString());
+        players[nextIndexPlayer(indexPlayer)].send(ProtocolWithClient.changeTurn().toString());
     }
 
     private int indexOfPlayer(int idPlayer) {
@@ -89,6 +111,13 @@ public class GameServerLogic {
 
     private int nextIndexPlayer(int index) {
         return (index+1)%players.length;
+    }
+
+    public void exit(int id) {
+        for (int i=0; i<players.length; ++i) {
+            if (players[i].getId() == id) continue;
+            players[i].send(ProtocolWithClient.exit(indexOfPlayer(id)));
+        }
     }
 
 }

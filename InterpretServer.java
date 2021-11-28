@@ -31,6 +31,25 @@ public class InterpretServer {
                 cardValue = Integer.parseInt(messPackage.getParameter(3));
                 game.flipCardPermanently(cardIndex1, cardIndex2, cardValue);
                 return;
+            case 5:
+                int index = Integer.parseInt(messPackage.getParameter(1));
+                int points = Integer.parseInt(messPackage.getParameter(2));
+                game.updatePoints(index,points);
+                return;
+            case 6:
+                int numberOfPlayers = Integer.parseInt(messPackage.getParameter(1));
+                String[] names = new String[numberOfPlayers];
+                for (int i=0; i<numberOfPlayers; ++i) {
+                    names[i] = messPackage.getParameter(i+2);
+                }
+                game.updateNames(names);
+                return;
+            case 7:
+                int indexPlayer = Integer.parseInt(messPackage.getParameter(1));
+                game.playersDisconnected(indexPlayer);
+                return;
+            case 8:
+
         }
     }
 }

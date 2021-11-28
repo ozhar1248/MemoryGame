@@ -1,5 +1,6 @@
 package MemoryGame;
 
+import javax.swing.*;
 import java.util.concurrent.locks.ReentrantLock;
 
 //problems:
@@ -13,7 +14,7 @@ import java.util.concurrent.locks.ReentrantLock;
 // PAY ATTENTION that we have 3 threads here- one from server, 2 from mouse-clicks and 3 from thread in "flipCard" function
 public class GameClientLogic {
     private GameGUI game;
-    private final Connection connection;
+    private final ConnectionClient connection;
     private final ReentrantLock lock;
     private final boolean[] flipped;
     private boolean firstCardOn;
@@ -23,27 +24,41 @@ public class GameClientLogic {
     private int countClicks;
     private boolean enableBoard;
     private boolean turn;
+    //private int[] points;
+    String[] names;
+    private boolean exited = false;
+    private MessagesDisplayer toWrite;
+    GameClient client;
+    int sizeRow;
 
-    public GameClientLogic(Connection connection) { // why it needs to get this parameter anyway?
+    public GameClientLogic(GameClient client, ConnectionClient connection, String name, int level) { // why it needs to get this parameter anyway?
         this.connection = connection;
+        this.client = client;
         lock = new ReentrantLock();
-        flipped = new boolean[16];
+        sizeRow = MemoryGame.sizeOfRow(level);
+        int size = sizeRow*sizeRow;
+        flipped = new boolean[size];
         firstCardOn = false;
-        for (int i=0; i<16; ++i) {
+        for (int i=0; i<size; ++i) {
             flipped[i] = false;
         }
         disableBoard();
-        connection.send(ProtocolWithServer.startGame(16).toString());
+
+        connection.send(ProtocolWithServer.startGame(sizeRow, name).toString());
     }
 
     public void waitForOpponents() {
-        System.out.println("Please wait for opponents");
+        game = new GameGUI(this, sizeRow);
+        turn = false;
+        game.writeMessage("Please wait for opponent");
     }
 
     public void startGame() {
-        game = new GameGUI(this);
-        turn = false;
-        game.writeMessage("Wait for your turn");
+        if (game == null) {
+            game = new GameGUI(this, sizeRow);
+            turn = false;
+        }
+        game.writeMessage("Game started. Wait for your turn");
     }
 
     public void turnOn() {
@@ -178,5 +193,36 @@ public class GameClientLogic {
             e.printStackTrace();
         }
         game.writeMessage("Please wait for your turn");
+    }
+
+    public void updateNames(String[] names) {
+//        points = new int[names.length];
+//        for (int i=0; i<names.length; ++i){
+//            points[i] = 0;
+//        }
+        this.names = names;
+        game.createNames(names);
+    }
+
+    public void updatePoints(int index, int points) {
+        game.updatePoints(index, points);
+    }
+
+    public void playersDisconnected(int index) {
+        if (exited) return;
+        turn = false;
+        if (index==0) {
+            game.writeMessage("Lost contact with server");
+        }
+        else {
+            game.writeMessage("Player "+names[index]+" quited the game");
+        }
+        exited = true;
+    }
+
+    public void exitGame() {
+        connection.send(ProtocolWithServer.exitGame());
+        game.setVisible(false);
+        client.exitGame();
     }
 }
