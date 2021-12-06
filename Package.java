@@ -3,7 +3,7 @@ package MemoryGame;
 import java.util.ArrayList;
 
 public class Package {
-    private int operation;
+    private final int operation;
     private int senderID;
     ArrayList<String> parameters;
 
@@ -14,15 +14,6 @@ public class Package {
     }
 
     public Package(String message) {
-        if (message == null ) {
-            System.out.println("I received null");
-            return;
-        }
-
-        if (message.equals("exit")) {
-
-        }
-        message = message.trim();
         String[] tokens = message.split("#");
         this.senderID = Integer.parseInt(tokens[0]);
         this.operation = Integer.parseInt(tokens[1]);
@@ -50,9 +41,9 @@ public class Package {
 
     /*parameter indexes start with 1*/
     public String getParameter(int index) {
-        return parameters.get(index-1); //TODO check index boundry
+        assert index>=1 && index <= parameters.size();
+        return parameters.get(index-1);
     }
-
 
     public String toString() {
         String message = ""+getSenderID()+"#"+getOperation();

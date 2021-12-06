@@ -8,8 +8,8 @@ import java.util.Map;
 import java.util.Stack;
 
 public class PlayersCollection {
-    private Map<Integer,Player> mapPlayers;
-    private Stack<Integer> removedInt;
+    private final Map<Integer,Player> mapPlayers;
+    private final Stack<Integer> removedInt;
     private int highestUnusedInt;
 
     public PlayersCollection() {
@@ -23,7 +23,7 @@ public class PlayersCollection {
         try {
             socket = serversocket.accept();
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("Unable to accept new player");
         }
         int id = (!removedInt.empty())? removedInt.pop() : highestUnusedInt++;
         Player player = new Player(socket,id);
@@ -40,5 +40,4 @@ public class PlayersCollection {
     public Player getPlayer(int id) {
         return mapPlayers.get(id);
     }
-
 }

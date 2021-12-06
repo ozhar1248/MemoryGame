@@ -1,25 +1,33 @@
 package MemoryGame;
 
+import java.util.Arrays;
 import java.util.Random;
 
 public class GameServerLogic {
-    private int[] board;
-    private Player[] players;
+    private final int[] board;
+    private final Player[] players;
     private int lastCardIndex;
-    private int points[];
+    private final int[] points;
+    private int totalPoints;
+    private boolean exited;
 
-    public GameServerLogic(int sizeRow, Player[] players) {
-        board = new int[sizeRow*sizeRow];
-        resetBoard();
-        //shuffle();
-        printBoard();
+    public GameServerLogic(int level, Player[] players) {
         this.players = players;
+        int size = MemoryGame.Sizes[level]*MemoryGame.Sizes[level];
+        board = new int[size];
         points = new int[players.length];
         lastCardIndex = -1;
+        totalPoints = 0;
+
+        resetBoard();
+        shuffle();
         resetPoints();
         informNames();
-        players[0].send(ProtocolWithClient.changeTurn());
+        giveFirstTurn();
+    }
 
+    private void giveFirstTurn() {
+        players[0].send(SenderToClient.turnOn());
     }
 
     private void informNames() {
@@ -28,13 +36,12 @@ public class GameServerLogic {
             names[i] = players[i].getName();
         }
         for (int i=0; i<players.length; ++i) {
-            players[i].send(ProtocolWithClient.informNames(names));
+            players[i].send(SenderToClient.informNames(names));
         }
     }
+
     private void resetPoints() {
-        for (int i=0; i< points.length; ++i) {
-            points[i] = 0;
-        }
+        Arrays.fill(points,0);
     }
 
     private void resetBoard() {
@@ -60,46 +67,36 @@ public class GameServerLogic {
         }
     }
 
-    private void printBoard() {
-        String s = "";
-        for (int i=0; i<board.length; ++i) {
-            s += board[i]+" ";
-        }
-        System.out.println(s);
-    }
-
-    private int getValue(int card) {
-        return board[card];
-    }
-
     public void cardChosen(int idPlayer, int cardIndex) {
-        //lock
         int indexPlayer = indexOfPlayer(idPlayer);
 
         if (lastCardIndex == -1) {
             for (int i=0; i<players.length; ++i) {
-                players[i].send(ProtocolWithClient.flipCard(cardIndex,getValue(cardIndex)).toString());
+                players[i].send(SenderToClient.flipCard(cardIndex,board[cardIndex]));
             }
             lastCardIndex = cardIndex;
-
             return;
         }
-        if (getValue(cardIndex) == getValue(lastCardIndex)) {
+
+        if (board[cardIndex] == board[lastCardIndex]) {
             points[indexPlayer]++;
             for (int i=0; i<players.length; ++i) {
-                players[i].send(ProtocolWithClient.flipCardsPermanently(cardIndex,lastCardIndex,getValue(cardIndex)).toString());
-                players[i].send(ProtocolWithClient.updatePoints(indexPlayer, points[indexPlayer]));
+                players[i].send(SenderToClient.flipCardsPermanently(cardIndex,lastCardIndex,board[cardIndex],indexPlayer));
             }
-
+            totalPoints++;
+            if (totalPoints == board.length/2) {
+                exit(-1);
+            }
             lastCardIndex = -1;
             return;
         }
+
         //in case of wrong choice
         for (int i=0; i<players.length; ++i) {
-            players[i].send(ProtocolWithClient.flipCard(cardIndex,getValue(cardIndex)).toString());
+            players[i].send(SenderToClient.flipCard(cardIndex,board[cardIndex]));
         }
         lastCardIndex = -1;
-        players[nextIndexPlayer(indexPlayer)].send(ProtocolWithClient.changeTurn().toString());
+        players[nextIndexPlayer(indexPlayer)].send(SenderToClient.turnOn());
     }
 
     private int indexOfPlayer(int idPlayer) {
@@ -114,10 +111,23 @@ public class GameServerLogic {
     }
 
     public void exit(int id) {
+        if (exited) {
+            return;
+        }
+        if (id >= 0) {
+            informQuitter(id);
+        }
+        exited = true;
+    }
+
+    private void informQuitter(int id) {
         for (int i=0; i<players.length; ++i) {
             if (players[i].getId() == id) continue;
-            players[i].send(ProtocolWithClient.exit(indexOfPlayer(id)));
+            players[i].send(SenderToClient.exit(indexOfPlayer(id)));
         }
     }
 
+    public boolean isFinished() {
+        return exited;
+    }
 }

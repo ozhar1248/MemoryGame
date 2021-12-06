@@ -55,7 +55,6 @@ public class GameGUI extends JFrame {
         add(exitButton,BorderLayout.SOUTH);
 
         setSize(800,800);
-        setVisible(true);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     }
 

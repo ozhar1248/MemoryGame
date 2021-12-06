@@ -7,24 +7,34 @@ package MemoryGame;
 3- flip card. parameter 1 - card index. parameter 2 - card value
 4- flip permanently 2 cards. par 1 is card 1 index. par 2 is card 2 index. par 3 is cards value
 5- update points. parameter 1 is the index of player, according to the names array that was sent earlier.
-   parameter 2 is the new points
-6- inform about number of players. par 1 is number of players. then next parameters are the player names. The player
-    will receive its name as "You"
+   parameter 2 is the new points- CANCELLED
+6- inform about names of players. par 1 is number of players. then next parameters are the player names
 7- exit. par 1 is the index of the player who exited
  */
-public class ProtocolWithClient {
+public class SenderToClient {
+    private static final int WAIT_FOR_OPPONENT = 0;
+    private static final int START_GAME = 1;
+    private static final int TURN_ON = 2;
+    private static final int FLIP_CARD = 3;
+    private static final int FLIP_PERMANENTLY = 4;
+    private static final int UPDATE_POINTS = 5;
+    private static final int INFORM_NAMES = 6;
+    private static final int EXIT = 7;
+
     public static String waitForOpponent() {
-        return new Package(0).toString();
+        return new Package(WAIT_FOR_OPPONENT).toString();
     }
+
     public static String startGame() {
-        return new Package(1).toString();
+        return new Package(START_GAME).toString();
     }
-    public static String changeTurn() {
-        return new Package(2).toString();
+
+    public static String turnOn() {
+        return new Package(TURN_ON).toString();
     }
 
     public static String informNames(String[] names) {
-        Package pack = new Package(6);
+        Package pack = new Package(INFORM_NAMES);
         pack.addParameter(""+names.length);
         for (int i=0; i< names.length; ++i) {
             pack.addParameter(names[i]);
@@ -33,29 +43,23 @@ public class ProtocolWithClient {
     }
 
     public static String flipCard(int cardIndex, int cardValue) {
-        Package pack = new Package(3);
+        Package pack = new Package(FLIP_CARD);
         pack.addParameter(""+cardIndex);
         pack.addParameter(""+cardValue);
         return pack.toString();
     }
 
-    public static String flipCardsPermanently(int cardIndex1, int cardIndex2, int value) {
-        Package pack = new Package(4);
+    public static String flipCardsPermanently(int cardIndex1, int cardIndex2, int value, int indexPlayer) {
+        Package pack = new Package(FLIP_PERMANENTLY);
         pack.addParameter(""+cardIndex1);
         pack.addParameter(""+cardIndex2);
         pack.addParameter(""+value);
-        return pack.toString();
-    }
-
-    public static String updatePoints(int index, int points) {
-        Package pack = new Package(5);
-        pack.addParameter(""+index);
-        pack.addParameter(""+points);
+        pack.addParameter(""+indexPlayer);
         return pack.toString();
     }
 
     public static String exit(int index) {
-        Package pack = new Package(7);
+        Package pack = new Package(EXIT);
         pack.addParameter(""+index);
         return pack.toString();
     }

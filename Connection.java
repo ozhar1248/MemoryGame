@@ -6,51 +6,57 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 
-public abstract class Connection implements ISubject{
-    protected Socket m_socket;
-    protected BufferedReader m_reader;
-    protected PrintWriter m_writer;
-    protected IObserver m_dispatcherToServer;
+public abstract class Connection implements ISubject, Runnable{
+    protected Socket socket;
+    protected BufferedReader reader;
+    protected PrintWriter writer;
+    protected IObserver observer;
     protected String newLine;
+    protected boolean listening;
 
 
     public Connection(Socket socket) {
-        m_socket = socket;
+        this.socket = socket;
         try {
-            m_reader = new BufferedReader(new InputStreamReader(m_socket.getInputStream()));
-            m_writer = new PrintWriter(m_socket.getOutputStream(), true);
+            reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            writer = new PrintWriter(socket.getOutputStream(), true);
         }
         catch (IOException e) {
             try {
-                m_socket.close();
+                socket.close();
             }
             catch (IOException e2) {
+                System.out.println("Unable to close connection");
             }
         }
+        listening = true;
     }
 
-
-
-
-
     public void send(String message) {
-        m_writer.println(message);
-        System.out.println("sent "+message);
+        writer.println(message);
     }
 
     public void registerObserver(IObserver o) {
-        m_dispatcherToServer = o;
+        observer = o;
     }
 
     public void removeObserver(IObserver o) {
-        m_dispatcherToServer = null;
+        observer = null;
     }
 
     public void notifyObservers() {
-        m_dispatcherToServer.update(newLine);
+        System.out.println("received: "+newLine);
+        observer.update(newLine);
     }
 
-    public abstract void startListening() ;
+    public void startListening() {
+        new Thread(this).start();
+    }
 
+    public void stopListening() {
+        listening = false;
+    }
+
+    public abstract void run();
 
 }

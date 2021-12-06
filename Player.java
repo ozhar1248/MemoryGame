@@ -1,17 +1,15 @@
 package MemoryGame;
 
 import java.net.Socket;
-import java.util.ArrayList;
 
 public class Player implements IObserver, ISubject{
     private int id;
     private String name;
     private ConnectionServer connectionWithUser;
-    private ArrayList<IObserver> observers;
+    private IObserver observer;
     String newMessage;
 
     public Player(Socket socket, int id) {
-        observers = new ArrayList<>();
         this.id = id;
         connectionWithUser = new ConnectionServer(socket);
         connectionWithUser.registerObserver(this);
@@ -28,6 +26,10 @@ public class Player implements IObserver, ISubject{
         connectionWithUser.startListening();
     }
 
+    public void stopListening() {
+        connectionWithUser.stopListening();
+    }
+
     public void send(String message) {
         connectionWithUser.send(message);
     }
@@ -35,7 +37,6 @@ public class Player implements IObserver, ISubject{
     public void setName(String name) {
         this.name = name;
     }
-
 
     @Override
     public void update(Object message) {
@@ -48,18 +49,19 @@ public class Player implements IObserver, ISubject{
 
     @Override
     public void registerObserver(IObserver o) {
-        observers.add(o);
+        observer = o;
     }
 
     @Override
     public void removeObserver(IObserver o) {
-        observers.remove(o);
+        observer = null;
     }
 
     @Override
     public void notifyObservers() {
-        for (int i=0; i<observers.size(); ++i) {
-            observers.get(i).update(newMessage);
+        if (observer == null) {
+            return;
         }
+        observer.update(newMessage);
     }
 }

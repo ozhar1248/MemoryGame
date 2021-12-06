@@ -7,7 +7,7 @@ operations:
 1 - card chosen. first parameter is card index. example: "0#1 means choose index 1
 2- player disconnected
  */
-public class ProtocolWithServer {
+public class SenderToServer {
 
     public static String chooseCard(int index) {
         Package pack =  new Package(1);

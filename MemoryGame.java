@@ -3,29 +3,24 @@ package MemoryGame;
 import java.awt.*;
 
 public class MemoryGame {
-    public static final int SIZE_ROW_EASY = 4;
+
+    public static final int SIZE_ROW_EASY = 2;
     public static final int SIZE_ROW_MEDIUM= 6;
     public static final int SIZE_ROW_HARD= 8;
-    public static final int NUM_OF_LEVELS= 3;
-    public static final int LEVEL1 = 1;
-    public static final int LEVEL2 = 2;
-    public static final int LEVEL3 = 3;
 
-    private static final int PORT = 7777;
+    public static final int EASY = 0;
+    public static final int MEDIUM= 1;
+    public static final int HARD= 2;
 
+    public static final int[] Sizes = {SIZE_ROW_EASY, SIZE_ROW_MEDIUM, SIZE_ROW_HARD};
 
-    public static int sizeOfRow(int level) {
-        if (level==1) {
-            return SIZE_ROW_EASY;
-        }
-        if (level==2) {
-            return SIZE_ROW_MEDIUM;
-        }
-        if (level==3) {
-            return SIZE_ROW_HARD;
-        }
-        return -1;
-    }
+    public static final int PORT = 7777;
+
+    public static final int NUM_OF_PLAYERS_IN_GAME = 2;
+
+    public static final int TIME_CARD_EXPOSED = 2000;
+    public static final int TIME_FOR_MESSAGE = 2000;
+
     public static final Color[] COLORS= {
         Color.BLUE,
         Color.RED,

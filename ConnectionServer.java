@@ -3,37 +3,33 @@ package MemoryGame;
 import java.io.IOException;
 import java.net.Socket;
 
-public class ConnectionServer extends Connection implements Runnable{
+public class ConnectionServer extends Connection{
+
     public ConnectionServer(Socket socket) {
         super(socket);
+        listening = true;
     }
 
     public void run() {
         try {
-            System.out.println("start listening to server");
-            while (true) {
-                newLine = m_reader.readLine();
-                System.out.println("rec: "+newLine);
+            while (listening) {
+                newLine = reader.readLine();
                 notifyObservers();
             }
         }
         catch (IOException e) {
-            System.out.println("player disconnected");
-            newLine = ProtocolWithServer.exitGame().toString();
+            newLine = SenderToServer.exitGame();
             notifyObservers();
         }
         finally {
             try {
-                m_socket.close();
+                socket.close();
             }
             catch (IOException e) {
-
+                System.out.println("Unable to close connection");
             }
         }
-
     }
 
-    public void startListening() {
-        new Thread(this).start();
-    }
+
 }

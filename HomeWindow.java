@@ -5,19 +5,20 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
-public class HomeWindow extends JFrame implements ActionListener, MessagesDisplayer {
-        private JTextField nameField;
-        private JRadioButton easy;
-        private JRadioButton medium;
-        private JRadioButton hard;
-        private GameClient client;
-        private JLabel message;
+public class HomeWindow extends JFrame implements ActionListener {
+        private final JTextField nameField;
+        private final JRadioButton easy;
+        private final JRadioButton medium;
+        private final JRadioButton hard;
+        private final GameClient client;
+        private final JLabel message;
 
 
 
     public HomeWindow(GameClient client) {
         super("Memory Game");
         this.client = client;
+
         JPanel form = new JPanel();
         form.setLayout(new GridLayout(4, 1));
         nameField = new JTextField();
@@ -40,20 +41,19 @@ public class HomeWindow extends JFrame implements ActionListener, MessagesDispla
         add(form, BorderLayout.CENTER);
         add(buttons, BorderLayout.SOUTH);
         startButton.addActionListener(this);
-        setVisible(true);
         setSize(300,300);
     }
 
     public void actionPerformed(ActionEvent e) {
         int level = -1;
         if (easy.isSelected()) {
-            level = 1;
+            level = MemoryGame.EASY;
         }
         else if (medium.isSelected()) {
-            level = 2;
+            level = MemoryGame.MEDIUM;
         }
         else if (hard.isSelected()) {
-            level = 3;
+            level = MemoryGame.HARD;
         }
 
         if (nameField.getText().trim().equals("")) {
@@ -64,8 +64,4 @@ public class HomeWindow extends JFrame implements ActionListener, MessagesDispla
         client.connectToServer(nameField.getText(), level);
     }
 
-    @Override
-    public void writeMessage(String message) {
-        this.message.setText(message);
-    }
 }

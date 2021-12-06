@@ -1,6 +1,6 @@
 package MemoryGame;
 
-public class InterpretServer {
+public class InterpretServer implements IInterpreter{
     GameClientLogic game;
 
     public InterpretServer(GameClientLogic game) {
@@ -10,6 +10,7 @@ public class InterpretServer {
     public void interpret(String s) {
         Package messPackage = new Package(s);
         int cardValue;
+        int indexPlayer;
         switch (messPackage.getOperation()) {
             case 0:
                 game.waitForOpponents();
@@ -29,12 +30,8 @@ public class InterpretServer {
                 int cardIndex1 = Integer.parseInt(messPackage.getParameter(1));
                 int cardIndex2 = Integer.parseInt(messPackage.getParameter(2));
                 cardValue = Integer.parseInt(messPackage.getParameter(3));
-                game.flipCardPermanently(cardIndex1, cardIndex2, cardValue);
-                return;
-            case 5:
-                int index = Integer.parseInt(messPackage.getParameter(1));
-                int points = Integer.parseInt(messPackage.getParameter(2));
-                game.updatePoints(index,points);
+                indexPlayer = Integer.parseInt(messPackage.getParameter(4));
+                game.flipCardPermanently(cardIndex1, cardIndex2, cardValue, indexPlayer);
                 return;
             case 6:
                 int numberOfPlayers = Integer.parseInt(messPackage.getParameter(1));
@@ -45,7 +42,7 @@ public class InterpretServer {
                 game.updateNames(names);
                 return;
             case 7:
-                int indexPlayer = Integer.parseInt(messPackage.getParameter(1));
+                indexPlayer = Integer.parseInt(messPackage.getParameter(1));
                 game.playersDisconnected(indexPlayer);
                 return;
             case 8:

@@ -1,6 +1,6 @@
 package MemoryGame;
 
-import javax.swing.*;
+import java.util.Arrays;
 import java.util.concurrent.locks.ReentrantLock;
 
 //problems:
@@ -12,66 +12,68 @@ import java.util.concurrent.locks.ReentrantLock;
 // 6. message "wrong" will be shown only if he tried two turns
 // 7. if you press first card, press second card, the first card is covered and the board is enabled and then you can press third card and then the second is covered
 // PAY ATTENTION that we have 3 threads here- one from server, 2 from mouse-clicks and 3 from thread in "flipCard" function
-public class GameClientLogic {
-    private GameGUI game;
+public class GameClientLogic implements IObserver{
     private final ConnectionClient connection;
     private final ReentrantLock lock;
     private final boolean[] flipped;
     private boolean firstCardOn;
-    //private boolean secondCardOn;
     private int firstCard;
-    //private final int[] turnIndexes;
     private int countClicks;
     private boolean enableBoard;
     private boolean turn;
-    //private int[] points;
-    String[] names;
+    private String[] names;
+    private int[] points;
+    private int totalPoints;
+    private int max;
+    private int maxIndex;
     private boolean exited = false;
-    private MessagesDisplayer toWrite;
-    GameClient client;
-    int sizeRow;
+    private final int sizeRow;
+    private final IInterpreter interpreter;
+    private final GUManagement gui;
 
-    public GameClientLogic(GameClient client, ConnectionClient connection, String name, int level) { // why it needs to get this parameter anyway?
+    public GameClientLogic(ConnectionClient connection, GUManagement gui, String name, int level) {
         this.connection = connection;
-        this.client = client;
+        this.gui = gui;
         lock = new ReentrantLock();
-        sizeRow = MemoryGame.sizeOfRow(level);
+
+        sizeRow = MemoryGame.Sizes[level];
         int size = sizeRow*sizeRow;
         flipped = new boolean[size];
-        firstCardOn = false;
-        for (int i=0; i<size; ++i) {
-            flipped[i] = false;
-        }
-        disableBoard();
 
-        connection.send(ProtocolWithServer.startGame(sizeRow, name).toString());
+        firstCardOn = false;
+        enableBoard = true;
+        totalPoints = 0;
+        max = 0;
+        maxIndex = -1;
+        Arrays.fill(flipped,false);
+        this.interpreter = new InterpretServer(this);
+        connection.registerObserver(this);
+        connection.startListening();
+
+        connection.send(SenderToServer.startGame(level, name));
     }
 
     public void waitForOpponents() {
-        game = new GameGUI(this, sizeRow);
+        gui.openGameWindow(this, sizeRow);
         turn = false;
-        game.writeMessage("Please wait for opponent");
+        printToUser("Please wait for opponent");
     }
 
     public void startGame() {
-        if (game == null) {
-            game = new GameGUI(this, sizeRow);
+        if (!gui.isGameOn()) {
+            gui.openGameWindow(this, sizeRow);
             turn = false;
         }
-        game.writeMessage("Game started. Wait for your turn");
+        printToUser("Game started. Wait for your turn");
     }
 
     public void turnOn() {
-        if (game == null) {
-            return;
-        }
         lock.lock();
         try {
-            assert(!isEnabled());
-            turn = true;
-            game.writeMessage("Its your turn. Please choose first card");
             resetTurn();
-            enableBoard();
+            enableBoard = true;
+            turn = true;
+            printToUser("Its your turn. Please choose first card");
         }
         finally {
             lock.unlock();
@@ -80,16 +82,16 @@ public class GameClientLogic {
 
     public void flipCard(int cardIndex, int value) {
         boolean isMyTurn = turn;
-        game.flipCard(cardIndex, value);
+        gui.getGameGUI().flipCard(cardIndex, value);
         new Thread(() -> {
             try {
-                Thread.sleep(3000);
+                Thread.sleep(MemoryGame.TIME_CARD_EXPOSED);
                 lock.lock();
                 try {
                     if (flipped[cardIndex]) {
                         return;
                     }
-                    game.coverCard(cardIndex);
+                    gui.getGameGUI().coverCard(cardIndex);
                     if (!isMyTurn) {
                         return;
                     }
@@ -108,25 +110,35 @@ public class GameClientLogic {
         }).start();
     }
 
-    public void flipCardPermanently(int cardIndex1, int cardIndex2, int cardValue) {
+    public void flipCardPermanently(int cardIndex1, int cardIndex2, int cardValue, int indexPlayer) {
         lock.lock();
         try {
             flipped[cardIndex1] = true;
             flipped[cardIndex2] = true;
-            game.flipCard(cardIndex1, cardValue);
-            game.flipCard(cardIndex2, cardValue);
-            if (!turn) {
+            gui.getGameGUI().flipCard(cardIndex1, cardValue);
+            gui.getGameGUI().flipCard(cardIndex2, cardValue);
+
+            totalPoints++;
+            gui.getGameGUI().updatePoints(indexPlayer, ++points[indexPlayer]);
+            if (points[indexPlayer] > max) {
+                max = points[indexPlayer];
+                maxIndex = indexPlayer;
+            }
+            if (isFinished()) {
+                finishGame();
                 return;
             }
-            resetTurn();
-            game.writeMessage("Bingo!");
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+            if (turn) {
+                resetTurn();
+                printToUser("Bingo!");
+                try {
+                    Thread.sleep(MemoryGame.TIME_FOR_MESSAGE);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                printToUser("Please choose first card");
+                enableBoard = true;
             }
-            game.writeMessage("Please choose first card");
-            enableBoard();
         }
         finally {
             lock.unlock();
@@ -140,18 +152,17 @@ public class GameClientLogic {
         boolean enable;
         lock.lock();
         try {
-            enable = !flipped[index] && isEnabled()  && !isRepeatedIndex(index);
+            enable = !flipped[index] && enableBoard && index != firstCard;
             if (enable) {
                 countClicks++;
                 if (countClicks == 2) {
-
-                    disableBoard(); // is it nessesery?
-                    game.writeMessage("");
+                    enableBoard = false;
+                    printToUser("");
                 }
                 if (countClicks == 1) {
                     firstCardOn = true;
                     firstCard = index;
-                    game.writeMessage("Please select second card");
+                    printToUser("Please select second card");
                 }
             }
         }
@@ -159,24 +170,8 @@ public class GameClientLogic {
             lock.unlock();
         }
         if (enable) {
-            connection.send(ProtocolWithServer.chooseCard(index).toString());
+            connection.send(SenderToServer.chooseCard(index));
         }
-    }
-
-    private boolean isRepeatedIndex(int index) {
-        return index == firstCard;
-    }
-
-    private void enableBoard() {
-        enableBoard = true;
-    }
-
-    private void disableBoard() {
-        enableBoard = false;
-    }
-
-    private boolean isEnabled() {
-        return enableBoard;
     }
 
     private void resetTurn() {
@@ -186,43 +181,58 @@ public class GameClientLogic {
 
     private void failedTurn() {
         turn = false;
-        game.writeMessage("wrong");
+        printToUser("wrong");
         try {
-            Thread.sleep(500);
+            Thread.sleep(MemoryGame.TIME_FOR_MESSAGE);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        game.writeMessage("Please wait for your turn");
+        printToUser("Please wait for your turn");
     }
 
     public void updateNames(String[] names) {
-//        points = new int[names.length];
-//        for (int i=0; i<names.length; ++i){
-//            points[i] = 0;
-//        }
         this.names = names;
-        game.createNames(names);
-    }
-
-    public void updatePoints(int index, int points) {
-        game.updatePoints(index, points);
+        points = new int[names.length];
+        Arrays.fill(points, 0);
+        gui.getGameGUI().createNames(names);
     }
 
     public void playersDisconnected(int index) {
         if (exited) return;
         turn = false;
-        if (index==0) {
-            game.writeMessage("Lost contact with server");
+        if (index==-1) {
+            printToUser("Lost contact with server");
         }
         else {
-            game.writeMessage("Player "+names[index]+" quited the game");
+            printToUser("Player "+names[index]+" quited the game");
         }
         exited = true;
     }
 
     public void exitGame() {
-        connection.send(ProtocolWithServer.exitGame());
-        game.setVisible(false);
-        client.exitGame();
+        connection.stopListening();
+        if (!isFinished()) {
+            connection.send(SenderToServer.exitGame());
+        }
+        gui.endGame();
     }
+
+    @Override
+    public void update(Object message) {
+        assert interpreter != null;
+        interpreter.interpret((String)message);
+    }
+
+    private void printToUser(String str) {
+        gui.getGameGUI().writeMessage(str);
+    }
+
+    private void finishGame() {
+        gui.getGameGUI().writeMessage(names[maxIndex]+" Won!!");
+    }
+
+    private boolean isFinished() {
+        return totalPoints == sizeRow*sizeRow/2;
+    }
+
 }
